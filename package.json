@@ -6,7 +6,7 @@
   "engines": {
     "vscode": "^1.80.0"
   },
-  "repository" : "none",
+  "repository" : "https://github.com/krixgris/makedynamicsql-vsce.git",
   "categories": [
     "Other"
   ],
