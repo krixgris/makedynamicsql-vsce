@@ -60,7 +60,11 @@ export function activate(context: vscode.ExtensionContext) {
 
             const lhs = equalsMatch ? equalsMatch[1].trim() : ''; // Extract LHS
             const rhs = equalsMatch ? equalsMatch[2].trim() : originalRHS; // Extract RHS or originalRHS
-            variables.push({ name, originalRHS, lhs, rhs });
+
+            // Fix RHS to replace single quotes inside with doubled single quotes
+            const escapedRHS = rhs.replace(/'/g, "''");
+
+            variables.push({ name, originalRHS, lhs, rhs: escapedRHS });
         }
 
         // Step 2: Escape single quotes in the SQL script before variable replacement
@@ -70,8 +74,8 @@ export function activate(context: vscode.ExtensionContext) {
         // Step 3: Replace the variables with their placeholders in the SQL script
         variables.forEach(({ name, originalRHS, lhs, rhs }) => {
             const replacement = lhs
-                ? `${lhs} = '' + ${name} + ''` // Add LHS = ' + @variable + '
-                : `'' + ${name} + ''`; // For variables without an LHS
+                ? `${lhs} = ' + ${name} + '` // Add LHS = ' + @variable + '
+                : `' + ${name} + '`; // For variables without an LHS
             const regex = new RegExp(escapeRegex(originalRHS), 'g');
             updatedSQL = updatedSQL.replace(regex, replacement);
         });
