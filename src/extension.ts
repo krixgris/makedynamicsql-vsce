@@ -37,7 +37,7 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         }
 
-        // Step 1: Parse the declare block to extract variables and their values
+        // Step 1: Parse the declare block
         const declareRegex = /declare\s+([\s\S]+?)\s*(?=\bgo\b|$)/i; // Regex for capturing declare block
         const match = declareRegex.exec(text);
         if (!match) {
@@ -48,44 +48,42 @@ export function activate(context: vscode.ExtensionContext) {
         const declareBlock = match[1].trim();
         const variableRegex = /(@\w+)\s+nvarchar\(max\)\s*=\s*'([^']+)'/gi;
 
-        const variables: { name: string; value: string; coreValue: string }[] = [];
+        const variables: { name: string; originalRHS: string; lhs: string; rhs: string }[] = [];
         let variableMatch;
         while ((variableMatch = variableRegex.exec(declareBlock)) !== null) {
-            const [_, name, value] = variableMatch;
-            const coreValue = extractCoreValue(value); // Helper to extract the core value (right-hand side)
-            variables.push({ name, value, coreValue });
+            const [_, name, originalRHS] = variableMatch;
+
+            // Extract LHS and RHS from the original RHS
+            const lhsRhsMatch = /^(.*=)\s*(.+)$/i.exec(originalRHS);
+            const lhs = lhsRhsMatch ? lhsRhsMatch[1].trim() : ''; // Everything before '='
+            const rhs = lhsRhsMatch ? lhsRhsMatch[2].trim() : originalRHS; // Everything after '='
+
+            variables.push({ name, originalRHS, lhs, rhs });
         }
 
-        // Step 2: Escape single quotes in the SQL (excluding the variable injections)
+        // Step 2: Escape single quotes (before variable replacement)
         let updatedSQL = text.replace(declareRegex, ''); // Remove the original declare block
 
-        // Escape single quotes in SQL string literals
-        updatedSQL = updatedSQL.replace(/'([^']+)'/g, "''$1''");
+        updatedSQL = updatedSQL.replace(/'([^']*)'/g, "''$1''"); // Double single quotes in strings
 
-        // Step 3: Replace variables with their placeholders in the SQL
-        variables.forEach(({ name }) => {
-            const replacement = `' + ${name} + '`; // Correct concatenation format
-            const regex = new RegExp(escapeRegex(name), 'g'); // Replace variables in the SQL script
+        // Step 3: Replace the variables with their placeholders in the SQL script
+        variables.forEach(({ name, lhs, originalRHS }) => {
+            const regex = new RegExp(escapeRegex(originalRHS), 'g');
+            const replacement = lhs ? `${lhs} ' + ${name} + '` : `' + ${name} + '`;
             updatedSQL = updatedSQL.replace(regex, replacement);
         });
 
-        // Step 4: Rebuild the declare block with only the right-hand side (core values)
+        // Step 4: Rebuild the declare block with RHS values only
         const newDeclareBlock = `declare ${variables
-            .map(({ name, coreValue }) => `${name} nvarchar(max) = '${coreValue}'`)
+            .map(({ name, rhs }) => `${name} nvarchar(max) = '${rhs}'`)
             .join(',\n        ')}\n`;
 
-        // Step 5: Wrap the SQL in @dynsql and handle the dynamic SQL
-        let dynamicSQL = `declare @dynsql nvarchar(max) = '`;
+        // Step 5: Wrap the SQL in @dynsql
+        let dynamicSQL = `declare @dynsql nvarchar(max) = '\n${updatedSQL}'\nexec(@dynsql)`;
 
-        // Add the SQL script, which already has single quotes escaped
-        dynamicSQL += updatedSQL;
-
-        // Add closing single quote and exec statement
-        dynamicSQL += `'\nexec(@dynsql)`;
-
-        // Step 6: Replace the editor content with the new declare block and dynamic SQL
+        // Step 6: Replace the editor content
         editor.edit((editBuilder) => {
-            editBuilder.replace(selection, newDeclareBlock + dynamicSQL.trim());
+            editBuilder.replace(selection, newDeclareBlock + '\n\n' + dynamicSQL.trim());
         });
     });
 
