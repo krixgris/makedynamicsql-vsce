@@ -37,6 +37,10 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         }
 
+        // Get the default data type from settings or fallback to "nvarchar(max)"
+        const config = vscode.workspace.getConfiguration("makedynsql");
+        const DEFAULT_DATA_TYPE = config.get<string>("defaultDataType", "nvarchar(max)");
+
         // Step 1: Parse the declare block
         const declareRegex = /declare\s+([\s\S]+?)\s*(?=\bgo\b|$)/i; // Regex for capturing declare block
         const match = declareRegex.exec(text);
@@ -46,40 +50,41 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         const declareBlock = match[1].trim();
-        const variableRegex = /(@\w+)\s+nvarchar\(max\)\s*=\s*'([^']+)'/gi;
+        const variableRegex = /(@\w+)\s+\w+\(.*?\)\s*=\s*'([^']*)'/gi;
 
         const variables: { name: string; originalRHS: string; lhs: string; rhs: string }[] = [];
         let variableMatch;
         while ((variableMatch = variableRegex.exec(declareBlock)) !== null) {
             const [_, name, originalRHS] = variableMatch;
+            const equalsMatch = /(.*?)=(.*)/.exec(originalRHS);
 
-            // Extract LHS and RHS from the original RHS
-            const lhsRhsMatch = /^(.*=)\s*(.+)$/i.exec(originalRHS);
-            const lhs = lhsRhsMatch ? lhsRhsMatch[1].trim() : ''; // Everything before '='
-            const rhs = lhsRhsMatch ? lhsRhsMatch[2].trim() : originalRHS; // Everything after '='
-
+            const lhs = equalsMatch ? equalsMatch[1].trim() : ''; // Extract LHS
+            const rhs = equalsMatch ? equalsMatch[2].trim() : originalRHS; // Extract RHS or originalRHS
             variables.push({ name, originalRHS, lhs, rhs });
         }
 
-        // Step 2: Escape single quotes (before variable replacement)
+        // Step 2: Escape single quotes in the SQL script before variable replacement
         let updatedSQL = text.replace(declareRegex, ''); // Remove the original declare block
-
-        updatedSQL = updatedSQL.replace(/'([^']*)'/g, "''$1''"); // Double single quotes in strings
+        updatedSQL = updatedSQL.replace(/'/g, "''");
 
         // Step 3: Replace the variables with their placeholders in the SQL script
-        variables.forEach(({ name, lhs, originalRHS }) => {
+        variables.forEach(({ name, originalRHS, lhs, rhs }) => {
+            const replacement = lhs
+                ? `${lhs} = '' + ${name} + ''` // Add LHS = ' + @variable + '
+                : `'' + ${name} + ''`; // For variables without an LHS
             const regex = new RegExp(escapeRegex(originalRHS), 'g');
-            const replacement = lhs ? `${lhs} ' + ${name} + '` : `' + ${name} + '`;
             updatedSQL = updatedSQL.replace(regex, replacement);
         });
 
-        // Step 4: Rebuild the declare block with RHS values only
+        // Step 4: Rebuild the declare block with right-hand values only
         const newDeclareBlock = `declare ${variables
-            .map(({ name, rhs }) => `${name} nvarchar(max) = '${rhs}'`)
+            .map(({ name, rhs }) => `${name} ${DEFAULT_DATA_TYPE} = '${rhs}'`)
             .join(',\n        ')}\n`;
 
-        // Step 5: Wrap the SQL in @dynsql
-        let dynamicSQL = `declare @dynsql nvarchar(max) = '\n${updatedSQL}'\nexec(@dynsql)`;
+        // Step 5: Wrap the SQL in @dynsql and handle dynamic SQL
+        let dynamicSQL = `declare @dynsql ${DEFAULT_DATA_TYPE} = '\n`;
+        dynamicSQL += updatedSQL;
+        dynamicSQL += `'\nexec(@dynsql)`;
 
         // Step 6: Replace the editor content
         editor.edit((editBuilder) => {
