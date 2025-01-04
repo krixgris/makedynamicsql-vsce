@@ -35,7 +35,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         const declareBlock = match[1].trim();
         const variableRegex = /(@\w+)\s*\w*\(.*?\)\s*=\s*'(.*)'/gi;
-        
+
         const variables: { name: string; originalRHS: string; lhs: string; rhs: string; has_quotes: boolean }[] = [];
         let variableMatch;
         while ((variableMatch = variableRegex.exec(declareBlock)) !== null) {
@@ -67,8 +67,9 @@ export function activate(context: vscode.ExtensionContext) {
         // Step 3: Replace the variables with their placeholders in the SQL script
         variables.forEach(({ name, originalRHS, lhs, rhs, has_quotes }) => {
             let doubleQuotes = "";
-            if (has_quotes) 
+            if (has_quotes) {
                 doubleQuotes = "''";
+            }
             const replacement = lhs
                 ? `${lhs} = ${doubleQuotes}' + ${name} + '${doubleQuotes}` // Add LHS = ' + @variable + '
                 : `${doubleQuotes}' + ${name} + '${doubleQuotes}`; // For variables without an LHS
