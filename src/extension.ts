@@ -5,22 +5,6 @@ import * as vscode from 'vscode';
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-
-    // Use the console to output diagnostic information (console.log) and errors (console.error)
-    // This line of code will only be executed once when your extension is activated
-    console.log('Congratulations, your extension "makedynsql" is now active!');
-
-    // The command has been defined in the package.json file
-    // Now provide the implementation of the command with registerCommand
-    // The commandId parameter must match the command field in package.json
-    const disposable = vscode.commands.registerCommand('makedynsql.helloWorld', () => {
-        // The code you place here will be executed every time your command is executed
-        // Display a message box to the user
-        vscode.window.showInformationMessage('Hello World from MakeDynamicSQL!');
-    });
-
-    context.subscriptions.push(disposable);
-
     const makeDynamic = vscode.commands.registerCommand('makedynsql.makeDynamic', async () => {
         const editor = vscode.window.activeTextEditor;
 
@@ -33,7 +17,7 @@ export function activate(context: vscode.ExtensionContext) {
         const text = editor.document.getText(selection);
 
         if (!text) {
-            vscode.window.showInformationMessage("No text selected.");
+            vscode.window.showInformationMessage("No text selected...");
             return;
         }
 
@@ -50,26 +34,33 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         const declareBlock = match[1].trim();
-        const variableRegex = /(@\w+)\s+\w+\(.*?\)\s*=\s*'([^']*)'/gi;
-
+        const variableRegex = /(@\w+)\s*\w*\(.*?\)\s*=\s*'(.*)'/gi;
+        
         const variables: { name: string; originalRHS: string; lhs: string; rhs: string }[] = [];
         let variableMatch;
         while ((variableMatch = variableRegex.exec(declareBlock)) !== null) {
             const [_, name, originalRHS] = variableMatch;
+
+            let lhs = '';
+            let rhs = originalRHS;
+
+            // If there's an equal sign in the RHS, split into LHS and RHS
             const equalsMatch = /(.*?)=(.*)/.exec(originalRHS);
+            if (equalsMatch) {
+                lhs = equalsMatch[1].trim(); // Extract LHS
+                rhs = equalsMatch[2].trim(); // Extract RHS
+            }
 
-            const lhs = equalsMatch ? equalsMatch[1].trim() : ''; // Extract LHS
-            const rhs = equalsMatch ? equalsMatch[2].trim() : originalRHS; // Extract RHS or originalRHS
+            // Normalize improperly escaped quotes (single quotes that aren't doubled)
+            const cleanedRHS = rhs.replace(/''/g, "'").replace(/'/g, "''");
 
-            // Fix RHS to replace single quotes inside with doubled single quotes
-            const escapedRHS = rhs.replace(/'/g, "''");
-
-            variables.push({ name, originalRHS, lhs, rhs: escapedRHS });
+            variables.push({ name, originalRHS, lhs, rhs: cleanedRHS });
         }
 
         // Step 2: Escape single quotes in the SQL script before variable replacement
         let updatedSQL = text.replace(declareRegex, ''); // Remove the original declare block
         updatedSQL = updatedSQL.replace(/'/g, "''");
+        vscode.window.showInformationMessage(`Updated sql: ${updatedSQL}`);
 
         // Step 3: Replace the variables with their placeholders in the SQL script
         variables.forEach(({ name, originalRHS, lhs, rhs }) => {
@@ -77,6 +68,9 @@ export function activate(context: vscode.ExtensionContext) {
                 ? `${lhs} = ' + ${name} + '` // Add LHS = ' + @variable + '
                 : `' + ${name} + '`; // For variables without an LHS
             const regex = new RegExp(escapeRegex(originalRHS), 'g');
+            // vscode.window.showInformationMessage(`variablrhs: ${originalRHS}`);
+            // vscode.window.showInformationMessage(`newlhs: ${lhs}`);
+            // vscode.window.showInformationMessage(`newrhs: ${rhs}`);
             updatedSQL = updatedSQL.replace(regex, replacement);
         });
 

@@ -6,7 +6,7 @@
   "engines": {
     "vscode": "^1.80.0"
   },
-  "repository" : "https://github.com/krixgris/makedynamicsql-vsce.git",
+  "repository": "https://github.com/krixgris/makedynamicsql-vsce.git",
   "categories": [
     "Other"
   ],
@@ -22,19 +22,19 @@
         "command": "makedynsql.makeDynamic",
         "title": "Make Dynamic SQL"
       }
-        ],
+    ],
     "configuration": {
-                "type": "object",
-                "title": "Dynamic SQL Plugin Settings",
-                "properties": {
-                    "makedynsql.defaultDataType": {
-                        "type": "string",
-                        "default": "nvarchar(max)",
-                        "description": "Default data type for declared variables."
-                    }
-                }
-            }
-      },
+      "type": "object",
+      "title": "Dynamic SQL Plugin Settings",
+      "properties": {
+        "makedynsql.defaultDataType": {
+          "type": "string",
+          "default": "nvarchar(max)",
+          "description": "Default data type for declared variables."
+        }
+      }
+    }
+  },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
