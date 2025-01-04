@@ -36,7 +36,7 @@ export function activate(context: vscode.ExtensionContext) {
         const declareBlock = match[1].trim();
         const variableRegex = /(@\w+)\s*\w*\(.*?\)\s*=\s*'(.*)'/gi;
         
-        const variables: { name: string; originalRHS: string; lhs: string; rhs: string }[] = [];
+        const variables: { name: string; originalRHS: string; lhs: string; rhs: string; has_quotes: boolean }[] = [];
         let variableMatch;
         while ((variableMatch = variableRegex.exec(declareBlock)) !== null) {
             const [_, name, originalRHS] = variableMatch;
@@ -51,10 +51,12 @@ export function activate(context: vscode.ExtensionContext) {
                 rhs = equalsMatch[2].trim(); // Extract RHS
             }
 
+            let has_quotes = rhs.includes("'");
+
             // Normalize improperly escaped quotes (single quotes that aren't doubled)
             const cleanedRHS = rhs.replace(/''/g, "'").replace(/'/g, "''");
 
-            variables.push({ name, originalRHS, lhs, rhs: cleanedRHS });
+            variables.push({ name, originalRHS, lhs, rhs: cleanedRHS, has_quotes });
         }
 
         // Step 2: Escape single quotes in the SQL script before variable replacement
@@ -63,10 +65,13 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showInformationMessage(`Updated sql: ${updatedSQL}`);
 
         // Step 3: Replace the variables with their placeholders in the SQL script
-        variables.forEach(({ name, originalRHS, lhs, rhs }) => {
+        variables.forEach(({ name, originalRHS, lhs, rhs, has_quotes }) => {
+            let doubleQuotes = "";
+            if (has_quotes) 
+                doubleQuotes = "''";
             const replacement = lhs
-                ? `${lhs} = ' + ${name} + '` // Add LHS = ' + @variable + '
-                : `' + ${name} + '`; // For variables without an LHS
+                ? `${lhs} = ${doubleQuotes}' + ${name} + '${doubleQuotes}` // Add LHS = ' + @variable + '
+                : `${doubleQuotes}' + ${name} + '${doubleQuotes}`; // For variables without an LHS
             const regex = new RegExp(escapeRegex(originalRHS), 'g');
             // vscode.window.showInformationMessage(`variablrhs: ${originalRHS}`);
             // vscode.window.showInformationMessage(`newlhs: ${lhs}`);
