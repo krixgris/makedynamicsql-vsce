@@ -82,7 +82,13 @@ export function activate(context: vscode.ExtensionContext) {
 
         // Step 4: Rebuild the declare block with right-hand values only
         const newDeclareBlock = `declare ${variables
-            .map(({ name, rhs }) => `${name} ${DEFAULT_DATA_TYPE} = '${rhs}'`)
+            .map(({ name, rhs, has_quotes }) => {
+                // Remove '' at the start and end of rhs if has_quotes is true
+                if (has_quotes) {
+                    rhs = rhs.replace(/^''(.*)''$/, '$1'); // Removes '' at the start and end, but keeps inside quotes intact
+                }
+                return `${name} ${DEFAULT_DATA_TYPE} = '${rhs}'`;
+            })
             .join(',\n        ')}\n`;
 
         // Step 5: Wrap the SQL in @dynsql and handle dynamic SQL

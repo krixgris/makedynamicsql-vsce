@@ -15,10 +15,6 @@
   "contributes": {
     "commands": [
       {
-        "command": "makedynsql.helloWorld",
-        "title": "Hello World"
-      },
-      {
         "command": "makedynsql.makeDynamic",
         "title": "Make Dynamic SQL"
       }
