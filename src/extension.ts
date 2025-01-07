@@ -62,7 +62,6 @@ export function activate(context: vscode.ExtensionContext) {
         // Step 2: Escape single quotes in the SQL script before variable replacement
         let updatedSQL = text.replace(declareRegex, ''); // Remove the original declare block
         updatedSQL = updatedSQL.replace(/'/g, "''");
-        vscode.window.showInformationMessage(`Updated sql: ${updatedSQL}`);
 
         // Step 3: Replace the variables with their placeholders in the SQL script
         variables.forEach(({ name, originalRHS, lhs, rhs, has_quotes }) => {
@@ -71,12 +70,9 @@ export function activate(context: vscode.ExtensionContext) {
                 doubleQuotes = "''";
             }
             const replacement = lhs
-                ? `${lhs} = ${doubleQuotes}' + ${name} + '${doubleQuotes}` // Add LHS = ' + @variable + '
-                : `${doubleQuotes}' + ${name} + '${doubleQuotes}`; // For variables without an LHS
+                ? `${lhs} = ${doubleQuotes}' + ${name} + N'${doubleQuotes}` // Add LHS = ' + @variable + '
+                : `${doubleQuotes}' + ${name} + N'${doubleQuotes}`; // For variables without an LHS
             const regex = new RegExp(escapeRegex(originalRHS), 'g');
-            // vscode.window.showInformationMessage(`variablrhs: ${originalRHS}`);
-            // vscode.window.showInformationMessage(`newlhs: ${lhs}`);
-            // vscode.window.showInformationMessage(`newrhs: ${rhs}`);
             updatedSQL = updatedSQL.replace(regex, replacement);
         });
 
@@ -92,7 +88,7 @@ export function activate(context: vscode.ExtensionContext) {
             .join(',\n        ')}\n`;
 
         // Step 5: Wrap the SQL in @dynsql and handle dynamic SQL
-        let dynamicSQL = `declare @dynsql ${DEFAULT_DATA_TYPE} = '\n`;
+        let dynamicSQL = `declare @dynsql ${DEFAULT_DATA_TYPE} = N'\n`;
         dynamicSQL += updatedSQL;
         dynamicSQL += `'\nexec(@dynsql)`;
 
