@@ -99,6 +99,9 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     context.subscriptions.push(makeDynamic);
+
+    const unJoinLines = vscode.commands.registerCommand('makedynsql.unJoinLines', async () => {
+    })
 }
 function extractCoreValue(value: string): string {
     // Logic to extract core value from RHS of the declaration
