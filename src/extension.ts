@@ -101,6 +101,13 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(makeDynamic);
 
     const unJoinLines = vscode.commands.registerCommand('makedynsql.unJoinLines', async () => {
+        // s/^\(\s*\)\(.*\),\([^,]*\)$/\1\2\r\1,\3/
+        // Implement above vim substitution to a vscode plugin
+        // replace last comma (or read from settings which delimiter) with a new line + delimiter
+        // place the delimiter either before or after new line depending on setting
+        // after replacement, move cursor one line up so the command can be repeated
+        //
+        // only perform the replacement if a comma is found, otherwise do nothing
     })
 }
 function extractCoreValue(value: string): string {
