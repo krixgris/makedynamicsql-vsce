@@ -100,7 +100,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(makeDynamic);
 
-    const unJoinLines = vscode.commands.registerCommand('makedynsql.unJoinLines', async () => {
+    const unJoinLines = vscode.commands.registerCommand('makedynsql.unJoinLines', async (args) => {
         // s/^\(\s*\)\(.*\),\([^,]*\)$/\1\2\r\1,\3/
         // Implement above vim substitution to a vscode plugin
         // replace last comma (or read from settings which delimiter) with a new line + delimiter
@@ -111,36 +111,51 @@ export function activate(context: vscode.ExtensionContext) {
         const editor = vscode.window.activeTextEditor;
 
         if (editor) {
+            // Read arguments
+            const delimiter = args?.delimiter || ","; // Default delimiter
+            const delimiterNewline = args?.delimiterNewline || false; // Whether to put delimiter on newline
+            const padding = args?.padding || false; // Only match delimiters surrounded by spaces
+            const ignoreParentheses = args?.ignoreParentheses ?? true; // Ignore delimiters inside parentheses by default
+            // const delimiter = ",";
+            // const delimiterNewline = false;
             const document = editor.document;
             const position = editor.selection.active; // Cursor position
             const line = document.lineAt(position.line); // Current line
-            const lineText = line.text;
-            const delimiter = ",";
-            const delimiterRegex = new RegExp(delimiter, "gi");
-            const delimiterNewline = false;
+            let lineText = line.text;
+
+            if (ignoreParentheses) {
+                lineText = lineText.replace(/\([^)]*\)/g, (match) => {
+                    return " ".repeat(match.length); // Replace with spaces to preserve line length
+                });
+            }
+
+            const delimiterRegex = padding
+                ? new RegExp(`\\s${delimiter}\\s`, "gi") // Match " delimiter " (surrounded by spaces)
+                : new RegExp(delimiter, "gi"); // Match the delimiter anywhere
 
             const delimiterCount = (lineText.match(delimiterRegex) || []).length;
-        const firstNonWhitespaceChar = lineText.trimStart().charAt(0);
-        if (
-            delimiterCount === 0 ||
-            (delimiterCount === 1 && firstNonWhitespaceChar === delimiter)
-        ) {
-            vscode.window.showInformationMessage("Line does not meet delimiter replacement criteria.");
-            return;
-        }
+            const firstNonWhitespaceChar = lineText.trimStart().charAt(0);
+            if (
+                delimiterCount === 0 ||
+                (delimiterCount === 1 && firstNonWhitespaceChar === delimiter)
+            ) {
+                vscode.window.showInformationMessage("Line does not meet delimiter replacement criteria.");
+                return;
+            }
 
-        // Find the last delimiter and split the line
-        const lastDelimiterIndex = lineText.lastIndexOf(delimiter);
-        const beforeDelimiterRaw = lineText.substring(0, lastDelimiterIndex);
-        const afterDelimiterRaw = lineText.substring(lastDelimiterIndex + 1).trim();
+            // Find the last delimiter and split the line
+            const lastDelimiterIndex = lineText.lastIndexOf(delimiter);
+            const originalLineText = line.text;
+            const beforeDelimiterRaw = originalLineText.substring(0, lastDelimiterIndex);
+            const afterDelimiterRaw = originalLineText.substring(lastDelimiterIndex + 1).trim();
 
-        // Add delimiter to either the new line or keep it on the current line
-        const beforeDelimiter = delimiterNewline
-            ? `${beforeDelimiterRaw}${delimiter.trimEnd()}`
-            : beforeDelimiterRaw;
-        const afterDelimiter = delimiterNewline
-            ? afterDelimiterRaw
-            : `${delimiter.trimEnd()}${afterDelimiterRaw}`
+            // Add delimiter to either the new line or keep it on the current line
+            const beforeDelimiter = delimiterNewline
+                ? `${beforeDelimiterRaw}${delimiter.trimEnd()}`
+                : beforeDelimiterRaw;
+            const afterDelimiter = delimiterNewline
+                ? afterDelimiterRaw
+                : `${delimiter.trimEnd()}${afterDelimiterRaw}`
 
             const indentation = lineText.match(/^\s*/)?.[0] || "";
 
