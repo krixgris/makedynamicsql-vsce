@@ -108,7 +108,52 @@ export function activate(context: vscode.ExtensionContext) {
         // after replacement, move cursor one line up so the command can be repeated
         //
         // only perform the replacement if a comma is found, otherwise do nothing
-    })
+        const editor = vscode.window.activeTextEditor;
+
+        if (editor) {
+            const document = editor.document;
+            const position = editor.selection.active; // Cursor position
+            const line = document.lineAt(position.line); // Current line
+            const lineText = line.text;
+            const delimiter = ",";
+            const delimiterRegex = new RegExp(delimiter, "gi");
+            const delimiterNewline = false;
+
+            const delimiterCount = (lineText.match(delimiterRegex) || []).length;
+        const firstNonWhitespaceChar = lineText.trimStart().charAt(0);
+        if (
+            delimiterCount === 0 ||
+            (delimiterCount === 1 && firstNonWhitespaceChar === delimiter)
+        ) {
+            vscode.window.showInformationMessage("Line does not meet delimiter replacement criteria.");
+            return;
+        }
+
+        // Find the last delimiter and split the line
+        const lastDelimiterIndex = lineText.lastIndexOf(delimiter);
+        const beforeDelimiterRaw = lineText.substring(0, lastDelimiterIndex);
+        const afterDelimiterRaw = lineText.substring(lastDelimiterIndex + 1).trim();
+
+        // Add delimiter to either the new line or keep it on the current line
+        const beforeDelimiter = delimiterNewline
+            ? `${beforeDelimiterRaw}${delimiter.trimEnd()}`
+            : beforeDelimiterRaw;
+        const afterDelimiter = delimiterNewline
+            ? afterDelimiterRaw
+            : `${delimiter.trimEnd()}${afterDelimiterRaw}`
+
+            const indentation = lineText.match(/^\s*/)?.[0] || "";
+
+            editor.edit(editBuilder => {
+                const newText = `${beforeDelimiter}\n${indentation}${afterDelimiter}`;
+                editBuilder.replace(line.range, newText);
+            }).then(() => {
+                const newPosition = new vscode.Position(position.line, beforeDelimiter.length);
+                editor.selection = new vscode.Selection(newPosition, newPosition);
+            });
+        };
+    });
+    context.subscriptions.push(unJoinLines);
 }
 function extractCoreValue(value: string): string {
     // Logic to extract core value from RHS of the declaration
