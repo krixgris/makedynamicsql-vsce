@@ -5,7 +5,7 @@ import * as vscode from 'vscode';
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-    const makeDynamic = vscode.commands.registerCommand('makedynsql.makeDynamic', async () => {
+    const makeDynamic = vscode.commands.registerCommand('makedynsql.makeDynamic', async (args) => {
         const editor = vscode.window.activeTextEditor;
 
         if (!editor) {
@@ -25,7 +25,6 @@ export function activate(context: vscode.ExtensionContext) {
         const config = vscode.workspace.getConfiguration("makedynsql");
         const DEFAULT_DATA_TYPE = config.get<string>("defaultDataType", "nvarchar(max)");
 
-        // Step 1: Parse the declare block
         const declareRegex = /declare\s+([\s\S]+?)\s*(?=\bgo\b|$)/i; // Regex for capturing declare block
         const match = declareRegex.exec(text);
         if (!match) {
@@ -59,12 +58,13 @@ export function activate(context: vscode.ExtensionContext) {
             variables.push({ name, originalRHS, lhs, rhs: cleanedRHS, has_quotes });
         }
 
-        // Step 2: Escape single quotes in the SQL script before variable replacement
+        // Escape quotes and start building new SQL block
+        // TODO: Remove initial go block if there is one
         let updatedSQL = text.replace(declareRegex, ''); // Remove the original declare block
         updatedSQL = updatedSQL.replace(/'/g, "''");
 
-        // Step 3: Replace the variables with their placeholders in the SQL script
-        variables.forEach(({ name, originalRHS, lhs, rhs, has_quotes }) => {
+        // Replace variables from top declare
+        variables.forEach(({ name, originalRHS, lhs, has_quotes }) => {
             let doubleQuotes = "";
             if (has_quotes) {
                 doubleQuotes = "''";
@@ -76,7 +76,7 @@ export function activate(context: vscode.ExtensionContext) {
             updatedSQL = updatedSQL.replace(regex, replacement);
         });
 
-        // Step 4: Rebuild the declare block with right-hand values only
+        // Rebuild the declare block with right-hand values only
         const newDeclareBlock = `declare ${variables
             .map(({ name, rhs, has_quotes }) => {
                 // Remove '' at the start and end, replace with single quotes if has_quotes is true
@@ -87,12 +87,12 @@ export function activate(context: vscode.ExtensionContext) {
             })
             .join(',\n        ')}\n`;
 
-        // Step 5: Wrap the SQL in @dynsql and handle dynamic SQL
+        // Wrap the SQL in @dynsql and handle dynamic SQL
         let dynamicSQL = `declare @dynsql ${DEFAULT_DATA_TYPE} = N'\n`;
         dynamicSQL += updatedSQL;
         dynamicSQL += `'\nexec(@dynsql)`;
 
-        // Step 6: Replace the editor content
+        // Replace the editor content
         editor.edit((editBuilder) => {
             editBuilder.replace(selection, newDeclareBlock + '\n\n' + dynamicSQL.trim());
         });
