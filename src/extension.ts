@@ -112,9 +112,9 @@ export function activate(context: vscode.ExtensionContext) {
 
         if (editor) {
             // Read arguments
-            const delimiter = args?.delimiter || ","; // Default delimiter
-            const delimiterNewline = args?.delimiterNewline || false; // Whether to put delimiter on newline
-            const padding = args?.padding || false; // Only match delimiters surrounded by spaces
+            const delimiter = args?.delimiter ?? ","; // Default delimiter
+            const delimiterNewline = args?.delimiterNewline ?? false; // Whether to put delimiter on newline
+            const padding = args?.padding ?? false; // Only match delimiters surrounded by spaces
             const ignoreParentheses = args?.ignoreParentheses ?? true; // Ignore delimiters inside parentheses by default
             const rePadDelimiter = args?.reapplyPadding ?? false; // Add padding when reinserting. I.e. space after and 
             const isCaseSensitive = args?.caseSensitive ?? false;
