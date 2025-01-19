@@ -139,7 +139,6 @@ export function activate(context: vscode.ExtensionContext) {
                 ? new RegExp(`\\s${delimiter}\\s`, regexSettings) // Match " delimiter " (surrounded by spaces)
                 : new RegExp(delimiter, regexSettings); // Match the delimiter anywhere
 
-            vscode.window.showInformationMessage(`${args}`);
             const delimiterCount = (lineText.match(delimiterRegex) || []).length;
             const firstWord = lineText.trimStart().substring(0, delimiterLength);
             if (
