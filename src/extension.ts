@@ -99,11 +99,95 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     context.subscriptions.push(makeDynamic);
-}
-function extractCoreValue(value: string): string {
-    // Logic to extract core value from RHS of the declaration
-    const match = /=\s*(.+)$/i.exec(value);
-    return match ? match[1].trim() : value; // If no match, return the original value
+
+    const unJoinLines = vscode.commands.registerCommand('makedynsql.unJoinLines', async (args) => {
+        // s/^\(\s*\)\(.*\),\([^,]*\)$/\1\2\r\1,\3/
+        // Implement above vim substitution to a vscode plugin
+        // replace last comma (or read from settings which delimiter) with a new line + delimiter
+        // place the delimiter either before or after new line depending on setting
+        // after replacement, move cursor one line up so the command can be repeated
+        //
+        // only perform the replacement if a comma is found, otherwise do nothing
+        const editor = vscode.window.activeTextEditor;
+
+        if (editor) {
+            // Read arguments
+            const delimiter = args?.delimiter || ","; // Default delimiter
+            const delimiterNewline = args?.delimiterNewline || false; // Whether to put delimiter on newline
+            const padding = args?.padding || false; // Only match delimiters surrounded by spaces
+            const ignoreParentheses = args?.ignoreParentheses ?? true; // Ignore delimiters inside parentheses by default
+            const rePadDelimiter = args?.reapplyPadding ?? false; // Add padding when reinserting. I.e. space after and 
+            const isCaseSensitive = args?.caseSensitive ?? false;
+
+            const delimiterLength = delimiter.length;
+            const rePadSpace = rePadDelimiter ? " " : "";
+
+            const document = editor.document;
+            const position = editor.selection.active; // Cursor position
+            const line = document.lineAt(position.line); // Current line
+            let lineText = line.text;
+
+            if (ignoreParentheses) {
+                lineText = lineText.replace(/\([^)]*\)/g, (match) => {
+                    return " ".repeat(match.length); // Replace with spaces to preserve line length
+                });
+            }
+
+            const regexSettings = isCaseSensitive ? "g" : "gi";
+
+            const delimiterRegex = padding
+                ? new RegExp(`\\s${delimiter}\\s`, regexSettings) // Match " delimiter " (surrounded by spaces)
+                : new RegExp(delimiter, regexSettings); // Match the delimiter anywhere
+
+            vscode.window.showInformationMessage(`${args}`);
+            const delimiterCount = (lineText.match(delimiterRegex) || []).length;
+            const firstWord = lineText.trimStart().substring(0, delimiterLength);
+            if (
+                delimiterCount === 0 ||
+                (delimiterCount === 1 && firstWord === delimiter)
+            ) {
+                vscode.window.showInformationMessage("Line does not meet delimiter replacement criteria.");
+                return;
+            }
+
+            // Find the last delimiter and split the line
+            const lastDelimiterIndex = lineText.lastIndexOf(delimiter);
+            const originalLineText = line.text;
+            const beforeDelimiterRaw = originalLineText.substring(0, lastDelimiterIndex);
+            const afterDelimiterRaw = originalLineText.substring(lastDelimiterIndex + delimiterLength).trim();
+
+            // Add delimiter to either the new line or keep it on the current line
+            const beforeDelimiter = delimiterNewline
+                ? `${beforeDelimiterRaw}${rePadSpace}${delimiter.trimEnd()}`
+                : beforeDelimiterRaw;
+            const afterDelimiter = delimiterNewline
+                ? afterDelimiterRaw
+                : `${delimiter.trimEnd()}${rePadSpace}${afterDelimiterRaw}`
+
+            const indentation = lineText.match(/^\s*/)?.[0] || "";
+
+            editor.edit(editBuilder => {
+                const newText = `${beforeDelimiter}\n${indentation}${afterDelimiter}`;
+                editBuilder.replace(line.range, newText);
+            }).then(() => {
+                const newPosition = new vscode.Position(position.line, beforeDelimiter.length);
+                editor.selection = new vscode.Selection(newPosition, newPosition);
+            });
+        };
+    });
+
+    vscode.commands.registerCommand('makedynsql.unJoinLinesComma', () => {
+        vscode.commands.executeCommand('makedynsql.unJoinLines', { delimiter: "," });
+    });
+
+    vscode.commands.registerCommand('makedynsql.unJoinLinesAnd', () => {
+        vscode.commands.executeCommand('makedynsql.unJoinLines', { delimiter: "and", padding: true, reapplyPadding: true });
+    });
+    vscode.commands.registerCommand('makedynsql.unJoinLinesOr', () => {
+        vscode.commands.executeCommand('makedynsql.unJoinLines', { delimiter: "or", padding: true, reapplyPadding: true });
+    });
+
+    context.subscriptions.push(unJoinLines);
 }
 
 function escapeRegex(text: string): string {

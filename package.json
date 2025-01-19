@@ -2,7 +2,7 @@
   "name": "makedynsql",
   "displayName": "MakeDynamicSQL",
   "description": "Change SQL into something runnable with dynamic SQL",
-  "version": "0.2.1",
+  "version": "0.3.1",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -17,6 +17,18 @@
       {
         "command": "makedynsql.makeDynamic",
         "title": "Make Dynamic SQL"
+      },
+      {
+        "command": "makedynsql.unJoinLines",
+        "title": "Unjoin Lines"
+      },
+      {
+        "command": "makedynsql.unJoinLinesAnd",
+        "title": "Unjoin Lines And"
+      },
+      {
+        "command": "makedynsql.unJoinLinesOr",
+        "title": "Unjoin Lines OR"
       }
     ],
     "configuration": {
@@ -27,6 +39,20 @@
           "type": "string",
           "default": "nvarchar(max)",
           "description": "Default data type for declared variables."
+        },
+        "makedynsql.defaultUnJoinDelimiter": {
+          "type": "string",
+          "default": ",",
+          "description": "Default delimiter to unjoin."
+        },
+        "makedynsql.defaultUnJoinDelimiterPlacement": {
+          "type": "string",
+          "enum": [
+            "startOfLine",
+            "endOfLine"
+          ],
+          "default": "startOfLine",
+          "description": "Default placement of delimiter. Typical comma first or comma last."
         }
       }
     }
