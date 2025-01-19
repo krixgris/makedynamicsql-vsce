@@ -13,6 +13,8 @@ This extension contributes the following settings:
 
 * `makedynsql.makeDynamic`: Replaces and makes dynsql
 * `makedynsql.unJoinLines`: Splits lines into rows and preserve indentation. Reverse of join, thus unjoin
+* `makedynsql.unJoinLinesAnd`: Splits lines into rows and preserve indentation. Reverse of join, thus unjoin
+* `makedynsql.unJoinLinesOR`: Splits lines into rows and preserve indentation. Reverse of join, thus unjoin
 
 ## Known Issues
 
