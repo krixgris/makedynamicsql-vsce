@@ -21,6 +21,14 @@
       {
         "command": "makedynsql.unJoinLines",
         "title": "Unjoin Lines"
+      },
+      {
+        "command": "makedynsql.unJoinLinesAnd",
+        "title": "Unjoin Lines And"
+      },
+      {
+        "command": "makedynsql.unJoinLinesOr",
+        "title": "Unjoin Lines OR"
       }
     ],
     "configuration": {

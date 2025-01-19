@@ -116,10 +116,12 @@ export function activate(context: vscode.ExtensionContext) {
             const delimiterNewline = args?.delimiterNewline || false; // Whether to put delimiter on newline
             const padding = args?.padding || false; // Only match delimiters surrounded by spaces
             const ignoreParentheses = args?.ignoreParentheses ?? true; // Ignore delimiters inside parentheses by default
+            const rePadDelimiter = args?.reapplyPadding ?? false; // Add padding when reinserting. I.e. space after and 
+            const isCaseSensitive = args?.caseSensitive ?? false;
 
             const delimiterLength = delimiter.length;
-            // const delimiter = ",";
-            // const delimiterNewline = false;
+            const rePadSpace = rePadDelimiter ? " " : "";
+
             const document = editor.document;
             const position = editor.selection.active; // Cursor position
             const line = document.lineAt(position.line); // Current line
@@ -131,10 +133,13 @@ export function activate(context: vscode.ExtensionContext) {
                 });
             }
 
-            const delimiterRegex = padding
-                ? new RegExp(`\\s${delimiter}\\s`, "gi") // Match " delimiter " (surrounded by spaces)
-                : new RegExp(delimiter, "gi"); // Match the delimiter anywhere
+            const regexSettings = isCaseSensitive ? "g" : "gi";
 
+            const delimiterRegex = padding
+                ? new RegExp(`\\s${delimiter}\\s`, regexSettings) // Match " delimiter " (surrounded by spaces)
+                : new RegExp(delimiter, regexSettings); // Match the delimiter anywhere
+
+            vscode.window.showInformationMessage(`${args}`);
             const delimiterCount = (lineText.match(delimiterRegex) || []).length;
             const firstWord = lineText.trimStart().substring(0, delimiterLength);
             if (
@@ -153,11 +158,11 @@ export function activate(context: vscode.ExtensionContext) {
 
             // Add delimiter to either the new line or keep it on the current line
             const beforeDelimiter = delimiterNewline
-                ? `${beforeDelimiterRaw}${delimiter.trimEnd()}`
+                ? `${beforeDelimiterRaw}${rePadSpace}${delimiter.trimEnd()}`
                 : beforeDelimiterRaw;
             const afterDelimiter = delimiterNewline
                 ? afterDelimiterRaw
-                : `${delimiter.trimEnd()}${afterDelimiterRaw}`
+                : `${delimiter.trimEnd()}${rePadSpace}${afterDelimiterRaw}`
 
             const indentation = lineText.match(/^\s*/)?.[0] || "";
 
@@ -170,6 +175,18 @@ export function activate(context: vscode.ExtensionContext) {
             });
         };
     });
+
+    vscode.commands.registerCommand('makedynsql.unJoinLinesComma', () => {
+        vscode.commands.executeCommand('makedynsql.unJoinLines', { delimiter: "," });
+    });
+
+    vscode.commands.registerCommand('makedynsql.unJoinLinesAnd', () => {
+        vscode.commands.executeCommand('makedynsql.unJoinLines', { delimiter: "and", padding: true, reapplyPadding: true });
+    });
+    vscode.commands.registerCommand('makedynsql.unJoinLinesOr', () => {
+        vscode.commands.executeCommand('makedynsql.unJoinLines', { delimiter: "or", padding: true, reapplyPadding: true });
+    });
+
     context.subscriptions.push(unJoinLines);
 }
 
