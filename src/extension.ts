@@ -151,7 +151,9 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             // Find the last delimiter and split the line
-            const lastDelimiterIndex = lineText.lastIndexOf(delimiter);
+            const lastDelimiterIndex = isCaseSensitive ?
+                lineText.lastIndexOf(delimiter) :
+                lineText.toLowerCase().lastIndexOf(delimiter.toLowerCase());
             const originalLineText = line.text;
             const beforeDelimiterRaw = originalLineText.substring(0, lastDelimiterIndex);
             const afterDelimiterRaw = originalLineText.substring(lastDelimiterIndex + delimiterLength).trim();
