@@ -21,7 +21,7 @@ This extension contributes the following settings:
 
 ## Example config
 // Example keybindings.json
-[
+```[
     {
         "key": "ctrl+u",
         "command": "makedynsql.unJoinLines"
@@ -65,6 +65,7 @@ This extension contributes the following settings:
         }
     },
 ]
+```
 
 ### 0.3.1
 
