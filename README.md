@@ -55,6 +55,7 @@ This extension contributes the following settings:
             "delimiter": "or",
             "padding": true,
             "reapplyPadding": true,
+            "caseSensitive": true,
         }
     },
     {
