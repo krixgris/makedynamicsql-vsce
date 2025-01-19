@@ -116,6 +116,8 @@ export function activate(context: vscode.ExtensionContext) {
             const delimiterNewline = args?.delimiterNewline || false; // Whether to put delimiter on newline
             const padding = args?.padding || false; // Only match delimiters surrounded by spaces
             const ignoreParentheses = args?.ignoreParentheses ?? true; // Ignore delimiters inside parentheses by default
+
+            const delimiterLength = delimiter.length;
             // const delimiter = ",";
             // const delimiterNewline = false;
             const document = editor.document;
@@ -134,10 +136,10 @@ export function activate(context: vscode.ExtensionContext) {
                 : new RegExp(delimiter, "gi"); // Match the delimiter anywhere
 
             const delimiterCount = (lineText.match(delimiterRegex) || []).length;
-            const firstNonWhitespaceChar = lineText.trimStart().charAt(0);
+            const firstWord = lineText.trimStart().substring(0, delimiterLength);
             if (
                 delimiterCount === 0 ||
-                (delimiterCount === 1 && firstNonWhitespaceChar === delimiter)
+                (delimiterCount === 1 && firstWord === delimiter)
             ) {
                 vscode.window.showInformationMessage("Line does not meet delimiter replacement criteria.");
                 return;
@@ -147,7 +149,7 @@ export function activate(context: vscode.ExtensionContext) {
             const lastDelimiterIndex = lineText.lastIndexOf(delimiter);
             const originalLineText = line.text;
             const beforeDelimiterRaw = originalLineText.substring(0, lastDelimiterIndex);
-            const afterDelimiterRaw = originalLineText.substring(lastDelimiterIndex + 1).trim();
+            const afterDelimiterRaw = originalLineText.substring(lastDelimiterIndex + delimiterLength).trim();
 
             // Add delimiter to either the new line or keep it on the current line
             const beforeDelimiter = delimiterNewline
@@ -169,11 +171,6 @@ export function activate(context: vscode.ExtensionContext) {
         };
     });
     context.subscriptions.push(unJoinLines);
-}
-function extractCoreValue(value: string): string {
-    // Logic to extract core value from RHS of the declaration
-    const match = /=\s*(.+)$/i.exec(value);
-    return match ? match[1].trim() : value; // If no match, return the original value
 }
 
 function escapeRegex(text: string): string {
