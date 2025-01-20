@@ -71,7 +71,7 @@ This extension contributes the following settings:
 ]
 ```
 
-### 0.3.2
+### 0.3.3
 
 
 ---
