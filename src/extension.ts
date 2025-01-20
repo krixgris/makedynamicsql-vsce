@@ -61,6 +61,7 @@ export function activate(context: vscode.ExtensionContext) {
         // Escape quotes and start building new SQL block
         // TODO: Remove initial go block if there is one
         let updatedSQL = text.replace(declareRegex, ''); // Remove the original declare block
+        updatedSQL = updatedSQL.replace(/\bgo\b/i, ''); // Removes standalone GO statements
         updatedSQL = updatedSQL.replace(/'/g, "''");
 
         // Replace variables from top declare
