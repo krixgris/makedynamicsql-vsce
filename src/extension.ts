@@ -61,6 +61,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         // Step 2: Escape single quotes in the SQL script before variable replacement
         let updatedSQL = text.replace(declareRegex, ''); // Remove the original declare block
+        updatedSQL = updatedSQL.replace(/\bgo\b/i, ''); // Removes standalone GO statements
         updatedSQL = updatedSQL.replace(/'/g, "''");
 
         // Step 3: Replace the variables with their placeholders in the SQL script
